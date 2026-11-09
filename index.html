@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Procrastination Compass</title>
+<style>
+/* Layout: playful color-block cards (no borders) on a soft mist ground, pill buttons, bouncy micro-interactions, emoji-coded scale and style tags. Single column: intro -> one-question quiz with dot rail -> result with colorful breakdown + strategy cards + a confetti pop. */
+:root{
+  --sage:#4f9478;
+  --sage-on:#fdfdfb;
+  --lavender:#8a76b3;
+  --lavender-on:#fdfdfb;
+  --coral:#e2683f;
+  --coral-on:#fdfdfb;
+  --sky:#3f8fb0;
+  --sky-on:#fdfdfb;
+  --sun:#d99a1f;
+  --sun-on:#2b2008;
+  --clay:#b5562f;
+  --clay-on:#fdfdfb;
+  --mist:#ffffff;
+  --sand:#f6f5f2;
+  --charcoal:#2b3a34;
+  --cloud:#ffffff;
+  color-scheme: light;
+}
+/* Deliberately single-theme: a bright white page is the point, so it stays white regardless of system/app dark mode. */
+
+*{box-sizing:border-box}
+html, body{margin:0}
+body{
+  background:var(--mist);
+  color:var(--charcoal);
+  font-family:'Nunito Sans', 'Segoe UI', Roboto, Arial, sans-serif;
+  padding-left:max(16px, env(safe-area-inset-left,0px));
+  padding-right:max(16px, env(safe-area-inset-right,0px));
+  overflow-x:hidden;
+}
+h1,h2,h3,h4{text-wrap:balance; margin:0; font-family:'Baloo 2','Nunito Sans',sans-serif}
+p{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+
+.stage{
+  max-width:620px;
+  margin:0 auto;
+  padding-block:44px 88px;
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:32px;
+  position:relative;
+}
+
+#screen-intro, #screen-result{display:flex; flex-direction:column; gap:32px}
+
+.masthead{display:flex; justify-content:space-between; align-items:center}
+.masthead .mark{font-family:'Baloo 2',sans-serif; font-weight:700; font-size:1.2rem}
+.masthead .mark span{color:var(--sage)}
+.masthead .emoji{font-size:1.4rem}
+
+.blob{
+  border-radius:32px;
+  padding:40px 36px;
+  color:var(--sage-on);
+  background:var(--sage);
+}
+.blob .eyebrow{font-size:.78rem; font-weight:800; letter-spacing:.03em; opacity:.8; display:flex; align-items:center; gap:6px}
+.blob h1{font-size:clamp(1.6rem,6vw,2.15rem); font-weight:800; line-height:1.18; margin-top:14px}
+.blob p{margin-top:16px; font-size:1.05rem; line-height:1.6; max-width:40ch; opacity:.92}
+
+.style-strip{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+.style-chip{
+  border-radius:20px;
+  padding:22px 8px 20px;
+  text-align:center;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  transition:transform .15s ease;
+  cursor:default;
+}
+.style-chip:hover{transform:translateY(-3px) rotate(-1deg)}
+.style-chip .ic{font-size:1.6rem}
+.style-chip .t{font-size:.76rem; font-weight:800}
+
+.btn{
+  font-family:'Nunito Sans',sans-serif;
+  font-size:1.05rem;
+  font-weight:800;
+  border:none;
+  background:var(--coral);
+  color:var(--coral-on);
+  padding:17px 26px;
+  border-radius:999px;
+  cursor:pointer;
+  width:100%;
+  text-align:center;
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1), opacity .12s ease;
+}
+.btn:hover{transform:translateY(-2px) scale(1.01)}
+.btn:active{transform:translateY(1px) scale(.97)}
+.btn:focus-visible{outline:3px solid var(--sky); outline-offset:3px}
+.btn.ghost{
+  background:transparent;
+  color:var(--charcoal);
+  border:2px solid var(--sand);
+  width:auto;
+  padding:11px 20px;
+  font-size:.92rem;
+}
+.btn.ghost:hover{transform:none; background:var(--sand)}
+
+/* QUIZ */
+.quiz-wrap{display:flex; flex-direction:column; gap:22px}
+.dot-rail{display:flex; gap:7px; flex-wrap:wrap}
+.dot-rail i{
+  width:10px; height:10px; border-radius:50%;
+  background:var(--sand);
+  transition:transform .2s ease, background .2s ease;
+}
+.dot-rail i.done{background:var(--sage)}
+.dot-rail i.now{background:var(--coral); transform:scale(1.4)}
+@media (prefers-reduced-motion: reduce){ .dot-rail i.now{transform:scale(1.2)} }
+
+.q-count{font-size:.85rem; font-weight:800; color:var(--sage)}
+
+.q-card{
+  background:var(--cloud);
+  border-radius:28px;
+  padding:44px 38px;
+  box-shadow:0 1px 0 var(--sand), 0 16px 40px -24px rgba(0,0,0,.18);
+}
+.q-text{font-size:clamp(1.2rem,4vw,1.55rem); line-height:1.45; font-weight:800}
+
+.scale{margin-top:34px; display:flex; flex-direction:column; gap:14px}
+.opts{display:grid; grid-template-columns:repeat(5,1fr); gap:10px}
+.opt{
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  border:none;
+  background:var(--sand);
+  border-radius:18px;
+  padding:16px 2px 14px;
+  cursor:pointer;
+  transition:transform .15s cubic-bezier(.34,1.56,.64,1), background .15s ease;
+}
+.opt .face{font-size:1.5rem}
+.opt .n{font-size:.68rem; font-weight:800; color:var(--charcoal); opacity:.55}
+.opt:hover{transform:translateY(-3px)}
+.opt.sel{background:var(--sage); transform:scale(1.06)}
+.opt.sel .n{color:var(--sage-on); opacity:.85}
+.opt:focus-visible{outline:3px solid var(--sky); outline-offset:2px}
+.scale-row{display:flex; justify-content:space-between; font-size:.72rem; font-weight:700; color:var(--charcoal); opacity:.55; padding-inline:2px}
+
+.quiz-nav{display:flex; justify-content:space-between; align-items:center}
+
+/* RESULTS */
+.confetti-layer{position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:5}
+.confetti-piece{
+  position:absolute; top:-24px; font-size:1.3rem;
+  animation:fall linear forwards;
+}
+@keyframes fall{
+  to{ transform:translateY(110vh) rotate(380deg); opacity:.9 }
+}
+@media (prefers-reduced-motion: reduce){ .confetti-piece{display:none} }
+
+.result-hero{border-radius:32px; padding:40px 36px; background:var(--coral); color:var(--coral-on)}
+.result-hero .eyebrow{font-size:.78rem; font-weight:800; opacity:.85; display:flex; align-items:center; gap:6px}
+.result-title{font-size:clamp(1.8rem,6.5vw,2.4rem); font-weight:800; margin-top:12px; display:flex; align-items:center; gap:10px}
+.result-tagline{margin-top:8px; font-size:.95rem; font-weight:700; opacity:.85; font-style:italic}
+.result-dek{margin-top:16px; font-size:1.05rem; line-height:1.6; opacity:.94}
+
+.result-section{display:flex; flex-direction:column; gap:16px}
+.section-head{display:flex; align-items:center; gap:8px; font-size:1rem; font-weight:800}
+.card{
+  background:var(--cloud);
+  border-radius:28px;
+  padding:32px;
+  box-shadow:0 1px 0 var(--sand), 0 16px 40px -24px rgba(0,0,0,.16);
+}
+.card.tint-sand{background:var(--sand); box-shadow:none}
+
+.breakdown{display:flex; flex-direction:column; gap:18px}
+.bd-row{display:grid; grid-template-columns:28px 92px 1fr 36px; align-items:center; gap:10px; min-width:0}
+.bd-row .ic{font-size:1.05rem; text-align:center}
+.bd-label{font-size:.82rem; font-weight:800; min-width:0}
+.bd-track{height:12px; background:var(--sand); border-radius:7px; overflow:hidden; min-width:0}
+.bd-fill{height:100%; border-radius:7px; transition:width .6s cubic-bezier(.34,1.1,.64,1)}
+.bd-row.lead .bd-label{text-decoration:underline; text-decoration-color:currentColor; text-decoration-thickness:2px}
+.bd-pct{font-size:.78rem; font-weight:700; opacity:.6; text-align:right; font-variant-numeric:tabular-nums}
+
+.strategy-list{display:flex; flex-direction:column; gap:16px}
+.strategy{
+  display:flex; gap:18px; align-items:flex-start;
+  background:var(--cloud); border-radius:24px; padding:26px;
+  box-shadow:0 1px 0 var(--sand), 0 16px 40px -24px rgba(0,0,0,.14);
+}
+.strategy .ic{
+  flex:none; width:44px; height:44px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.1rem; font-weight:800;
+}
+.strategy .body h4{font-size:1.04rem; font-weight:800; margin-bottom:6px}
+.strategy .body p{font-size:.94rem; opacity:.72; line-height:1.55}
+
+.second-note{font-size:.94rem; line-height:1.55; background:var(--sand); border-radius:22px; padding:22px 24px}
+.second-note b{font-weight:800}
+
+.result-actions{display:flex; gap:12px; flex-wrap:wrap}
+.result-actions .btn{width:auto; flex:1; min-width:150px}
+
+footer{text-align:center; font-size:.76rem; opacity:.55; padding-top:8px}
+
+@media (max-width:460px){
+  .style-strip{grid-template-columns:repeat(2,1fr)}
+  .bd-row{grid-template-columns:22px 70px 1fr 34px}
+  .q-card{padding:30px 22px}
+  .card{padding:24px}
+  .blob{padding:30px 24px}
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <div class="masthead">
+    <div class="mark">procrastination <span>compass</span></div>
+    <div class="emoji">🧭</div>
+  </div>
+
+  <!-- INTRO -->
+  <section id="screen-intro">
+    <div class="blob">
+      <div class="eyebrow">🎓 a deadline gut-check for future actuaries</div>
+      <h1>Why that control cycle assignment is still untouched at 1am</h1>
+      <p>"Just stop procrastinating" is useless advice — the person cramming for a stats exam and the one who can't open their cadetship application are stalling for completely different reasons. 12 quick questions about uni, exams and the long road to Associate — zero judgment, one surprisingly accurate answer at the end.</p>
+    </div>
+    <div class="style-strip" aria-hidden="true">
+      <div class="style-chip" style="background:color-mix(in srgb, var(--coral) 18%, var(--cloud))"><div class="ic">✏️</div><div class="t">Perfectionist</div></div>
+      <div class="style-chip" style="background:color-mix(in srgb, var(--lavender) 18%, var(--cloud))"><div class="ic">🙈</div><div class="t">Avoider</div></div>
+      <div class="style-chip" style="background:color-mix(in srgb, var(--sky) 18%, var(--cloud))"><div class="ic">💭</div><div class="t">Dreamer</div></div>
+      <div class="style-chip" style="background:color-mix(in srgb, var(--sun) 22%, var(--cloud))"><div class="ic">⏱️</div><div class="t">Crisis-Maker</div></div>
+      <div class="style-chip" style="background:color-mix(in srgb, var(--clay) 18%, var(--cloud))"><div class="ic">🚫</div><div class="t">Defier</div></div>
+      <div class="style-chip" style="background:color-mix(in srgb, var(--sage) 20%, var(--cloud))"><div class="ic">📚</div><div class="t">Overdoer</div></div>
+    </div>
+    <button class="btn" id="startBtn">Diagnose my chaos →</button>
+  </section>
+
+  <!-- QUIZ -->
+  <section id="screen-quiz" hidden>
+    <div class="quiz-wrap">
+      <div class="dot-rail" id="progressRail"></div>
+      <div class="q-count" id="qCount"></div>
+      <div class="q-card">
+        <div class="q-text" id="qText"></div>
+        <div class="scale">
+          <div class="opts" id="opts" role="radiogroup"></div>
+          <div class="scale-row"><span>Who, me?</span><span>Painfully accurate</span></div>
+        </div>
+      </div>
+      <div class="quiz-nav">
+        <button class="btn ghost" id="backBtn">← Back</button>
+        <button class="btn ghost" id="restartLink">Restart</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="screen-result" hidden>
+    <div class="result-hero">
+      <div class="eyebrow">🎉 THE DIAGNOSIS IS IN</div>
+      <div class="result-title"><span id="resIcon"></span><span id="resTitle"></span></div>
+      <div class="result-tagline" id="resTagline"></div>
+      <p class="result-dek" id="resDek"></p>
+    </div>
+
+    <div class="card">
+      <div class="section-head">📊 The full scoreboard</div>
+      <div class="breakdown" id="breakdown"></div>
+    </div>
+
+    <div class="card tint-sand">
+      <div class="section-head">💡 Plot twist: here's actually going on</div>
+      <p id="resTrigger" style="font-size:.95rem; line-height:1.55"></p>
+    </div>
+
+    <div>
+      <div class="section-head">🛠️ Your survival kit for this semester</div>
+      <div class="strategy-list" id="strategyList"></div>
+    </div>
+
+    <p class="second-note" id="secondNote" hidden></p>
+
+    <div class="result-actions">
+      <button class="btn" id="retakeBtn">🔄 Run it again</button>
+      <button class="btn ghost" id="copyBtn">Copy my chaos</button>
+    </div>
+  </section>
+
+  <footer>Loosely based on real research by Linda Sapadin & Piers Steel, lightly chaos-ified by us. Not a diagnosis — just a mirror with jokes.</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var COLOR = {
+    perfectionist: {bg:"var(--coral)", on:"var(--coral-on)"},
+    avoider: {bg:"var(--lavender)", on:"var(--lavender-on)"},
+    dreamer: {bg:"var(--sky)", on:"var(--sky-on)"},
+    crisis: {bg:"var(--sun)", on:"var(--sun-on)"},
+    defier: {bg:"var(--clay)", on:"var(--clay-on)"},
+    overdoer: {bg:"var(--sage)", on:"var(--sage-on)"}
+  };
+
+  var STYLES = {
+    perfectionist: {
+      title: "The Perfectionist",
+      icon: "✏️",
+      tagline: "aka the one-formula-seventeen-times person",
+      dek: "You don't avoid the control cycle report, the Excel model, or the cadetship cover letter — you avoid starting it before you can guarantee it'll be flawless. If a model can't balance perfectly, part of you would rather it not exist yet.",
+      trigger: "Your brain fuses “not started” with “still possibly perfect.” The moment you put a number in a cell or a sentence on the page, the assignment becomes real and gradable — so starting feels riskier than waiting until the night before it's due, when there's conveniently no time left to judge it.",
+      strategies: [
+        ["Set a floor, not a ceiling", "Decide what counts as “done” for today — a rough spreadsheet structure, a messy first paragraph of the report. That floor is the real goal for this sitting, not a model clean enough to show a partner at Finity."],
+        ["Timebox the first touch", "Give yourself 15 minutes to build something ugly on purpose — a half-finished formula, a rough outline. A bad draft breaks the spell that nothing exists yet."],
+        ["Draft and edit on different days", "Build the rough model or write the rough answer, then don't reread it until tomorrow. Checking your own working while you're still producing it guarantees the inner critic wins."],
+        ["Ask what the extra 5% actually costs you", "Compare six hours of polishing a report to submitting solid work at hour two. In most accredited subjects the mark gap is smaller than the time gap — and the second version actually gets submitted before the portal closes."]
+      ]
+    },
+    avoider: {
+      title: "The Avoider",
+      icon: "🙈",
+      tagline: "aka professional tab-closer",
+      dek: "The assignment, or the exam results portal, isn't the scary part — what your mark or your lecturer's feedback might say about whether you're cut out for this is. If you never check, the judgment stays hypothetical.",
+      trigger: "Avoidance is really an emotion-regulation move: put distance between you and the Actuaries Institute exam results, and you put distance between you and the fear of being found out as not Fellowship material. The relief of closing the tab is real, which is exactly why your brain keeps doing it on repeat.",
+      strategies: [
+        ["Name the feared outcome out loud", "Finish: “If I check my exam result and it's bad, the actual worst thing that happens is ___.” It's almost always a resit or a rethink, not the end of the pathway."],
+        ["Shrink the exposure first", "Do the private version before the public one — your own practice problems before a study group, your own draft cover letter before a careers advisor sees it."],
+        ["Pre-write your response to criticism", "Decide now what you'll say if a lecturer's comment or an interview rejection stings. Rehearsed responses take the threat out of actually opening the feedback."],
+        ["Remember it's one data point, not a verdict", "One subpar mark or one knocked-back cadetship application isn't proof you won't make Associate — it's one thing you get to act on and try again."]
+      ]
+    },
+    dreamer: {
+      title: "The Dreamer",
+      icon: "💭",
+      tagline: "aka Fellow actuary in 2033, exemption plan TBD",
+      dek: "You're energized by the idea of it — Associate, then Fellow, a graduate role at Finity or a Big Four consultancy, the six-figure salary everyone mentions — but the boring first step never quite turns into a plan.",
+      trigger: "Big goals feel great precisely because they're abstract. The moment “become an actuary” has to become “check which of my units are Actuaries Institute accredited and map my exemptions,” the appeal drops like a dropped call — and so does your follow-through.",
+      strategies: [
+        ["Shrink the vision to one physical action", "Not “figure out my whole pathway” — “open the Actuaries Institute accreditation list and check one of my units for five minutes.”"],
+        ["Put it on the calendar, not just the list", "A task buried in an app competes with everything in your head. A scheduled block — “submit one cadetship application Thursday 4pm” — competes with nothing."],
+        ["Borrow a classmate's deadline", "Tell someone in your uni's actuarial society a specific day you'll show them your application or study plan. Their eyes are the structure your plan is missing."],
+        ["Keep a running “next three steps” note", "Skip the vision board of a corner office. A short list of concrete next actions — which exemption, which firm, which exam sitting — always tells you where to start."]
+      ]
+    },
+    crisis: {
+      title: "The Crisis-Maker",
+      icon: "⏱️",
+      tagline: "aka last-minute legend, energy drink's best customer",
+      dek: "You work in one gear: the all-nighter before the stats final, fuelled by caffeine and panic. You're not incapable of starting early — it just never felt like it counted.",
+      trigger: "Your brain learned that panic switches your focus on, so it manufactures that panic every time by delaying. It works — right up until an all-nighter before a heavily technical exam collides with a cadetship interview the next morning, and then it very much doesn't.",
+      strategies: [
+        ["Build yourself a fake deadline", "Set a self-imposed checkpoint two days before an exam or application closes, with a real cost attached if you miss it — tell a friend, make a small bet."],
+        ["Protect one real buffer day", "Keep one non-negotiable day before the actual exam or submission date, for the semester your gamble collides with a cold or two accredited-subject deadlines at once."],
+        ["Do the thinking early, even if not the writing", "Working through a few past-exam questions or outlining a report days ahead means the sprint isn't starting from zero."],
+        ["Track whether the rush actually helps", "Keep an honest tally of marks and exam results — most crisis-makers overrate their own deadline performance once they actually check the numbers."]
+      ]
+    },
+    defier: {
+      title: "The Defier",
+      icon: "🚫",
+      tagline: "aka “you're not my syllabus” energy",
+      dek: "A syllabus deadline, a parent's reminder that “actuary is a stable career,” an exam-sitting date set by the Actuaries Institute — being told something must happen by a certain time makes you want to do it less, even when it's fair.",
+      trigger: "This treats a deadline as a demand on your independence, not information about time. Pushing back, even at a cost to your own mark or your exemption timeline, restores a feeling of control — a very expensive way to win an argument nobody else knew you were having.",
+      strategies: [
+        ["Rewrite the deadline in your own words", "“I'm finishing this control cycle report Thursday because I want my weekend free” feels different than someone else's date on a syllabus."],
+        ["Claim one piece that's genuinely yours", "Pick the part you actually get to decide — which firms you apply to, which exam sitting you choose — and start there."],
+        ["Notice who the delay actually costs", "Usually you, not the lecturer or the Institute. Name that cost before you stall on principle — petty victories don't pay rent, and they don't get you exemptions either."],
+        ["Negotiate out loud instead of stalling silently", "A direct ask for an extension beats invisible resistance, and you might actually win it."]
+      ]
+    },
+    overdoer: {
+      title: "The Overdoer",
+      icon: "📚",
+      tagline: "aka human group project, running on fumes",
+      dek: "A full accredited-subject load, a part-time job, the actuarial students' society, and three cadetship applications due the same week — you say yes to all of it and end up with more commitments than hours. You're not avoiding the work; you're drowning in it.",
+      trigger: "With nothing clearly more important than anything else on a given Tuesday, your brain defaults to whichever thing feels loudest — rarely the control cycle assignment actually due tomorrow, usually the group chat having a meltdown about the case study.",
+      strategies: [
+        ["Pick one thing before opening anything else", "Name the task that makes today a win — one exam-prep set, one application — then do that before checking any group chat."],
+        ["Practice a specific no", "“Not this cadetship round, maybe next intake” protects the commitments you've already made better than a vague maybe."],
+        ["Keep every deadline in one place", "One calendar for uni, exams, and cadetship rounds — not five apps and your memory. A scattered list makes everything feel equally urgent at 11pm."],
+        ["Pad every estimate by half", "If a past-exam paper feels like an hour, plan ninety minutes. That gap is what turns a manageable week into a crisis week right before results come out."]
+      ]
+    }
+  };
+
+  var QUESTIONS = [
+    { s:"perfectionist", t:"I'd rather submit a control cycle report or Excel model late than hand in one I don't think is my best work." },
+    { s:"perfectionist", t:"I often rebuild the same formula or rewrite the same paragraph because the first attempt wasn't flawless enough to keep going." },
+    { s:"avoider", t:"I put off checking exam results, emailing a lecturer, or opening a cadetship rejection email because I'm worried about what I'll find." },
+    { s:"avoider", t:"Just thinking about a heavily technical assignment or a stats exam makes me anxious enough that I find something else to do instead." },
+    { s:"dreamer", t:"I love imagining myself as a Fellow actuary at a firm like Finity, Taylor Fry, or a Big Four consultancy, but the actual next concrete step — exemptions, applications — is where I get stuck." },
+    { s:"dreamer", t:"I have a career plan toward becoming an actuary that I genuinely care about, but it's stayed vague for a long time without a real timeline." },
+    { s:"crisis", t:"I tend to do my best work in a last-minute rush the night before a stats exam or an application deadline." },
+    { s:"crisis", t:"I feel more focused cramming against an exam date than when I have plenty of time to spread the revision out." },
+    { s:"defier", t:"When a lecturer, the Actuaries Institute, or my parents set a deadline for me, part of me resists it even if it's fair." },
+    { s:"defier", t:"I delay coursework or exam prep longer when I feel like I didn't get a say in how or when it should be done." },
+    { s:"overdoer", t:"Between a full accredited-subject load, a part-time job, the actuarial society, and cadetship applications, I take on more than I can realistically keep up with." },
+    { s:"overdoer", t:"My list of assignments, exam prep, and applications is long enough that it's hard to tell what needs my attention first." }
+  ];
+
+  var FACES = ["😌","🙂","😐","😬","😩"];
+
+  var scores = {perfectionist:0, avoider:0, dreamer:0, crisis:0, defier:0, overdoer:0};
+  var answers = new Array(QUESTIONS.length).fill(null);
+  var idx = 0;
+
+  var introEl = document.getElementById('screen-intro');
+  var quizEl = document.getElementById('screen-quiz');
+  var resultEl = document.getElementById('screen-result');
+
+  function show(screen){
+    introEl.hidden = screen !== 'intro';
+    quizEl.hidden = screen !== 'quiz';
+    resultEl.hidden = screen !== 'result';
+  }
+
+  function buildRail(){
+    var rail = document.getElementById('progressRail');
+    rail.innerHTML = '';
+    for (var i=0;i<QUESTIONS.length;i++){
+      rail.appendChild(document.createElement('i'));
+    }
+  }
+
+  function renderRail(){
+    var segs = document.getElementById('progressRail').children;
+    for (var i=0;i<segs.length;i++){
+      segs[i].className = i < idx ? 'done' : (i === idx ? 'now' : '');
+    }
+  }
+
+  function renderQuestion(){
+    renderRail();
+    document.getElementById('qCount').textContent = 'Question ' + (idx+1) + ' of ' + QUESTIONS.length;
+    document.getElementById('qText').textContent = QUESTIONS[idx].t;
+    var opts = document.getElementById('opts');
+    opts.innerHTML = '';
+    for (var v=1; v<=5; v++){
+      var b = document.createElement('button');
+      b.className = 'opt' + (answers[idx]===v ? ' sel' : '');
+      b.innerHTML = '<span class="face">' + FACES[v-1] + '</span><span class="n">' + v + '</span>';
+      b.setAttribute('role','radio');
+      b.setAttribute('aria-checked', answers[idx]===v ? 'true':'false');
+      b.addEventListener('click', (function(val){
+        return function(){ selectAnswer(val); };
+      })(v));
+      opts.appendChild(b);
+    }
+    document.getElementById('backBtn').style.visibility = idx===0 ? 'hidden' : 'visible';
+  }
+
+  function selectAnswer(v){
+    answers[idx] = v;
+    renderQuestion();
+    window.setTimeout(function(){
+      if (idx < QUESTIONS.length - 1){
+        idx++;
+        renderQuestion();
+      } else {
+        computeResult();
+      }
+    }, 220);
+  }
+
+  document.getElementById('backBtn').addEventListener('click', function(){
+    if (idx>0){ idx--; renderQuestion(); }
+  });
+  document.getElementById('restartLink').addEventListener('click', resetAll);
+  document.getElementById('retakeBtn').addEventListener('click', resetAll);
+
+  function resetAll(){
+    answers = new Array(QUESTIONS.length).fill(null);
+    idx = 0;
+    scores = {perfectionist:0, avoider:0, dreamer:0, crisis:0, defier:0, overdoer:0};
+    removeConfetti();
+    show('intro');
+  }
+
+  document.getElementById('startBtn').addEventListener('click', function(){
+    buildRail();
+    renderQuestion();
+    show('quiz');
+  });
+
+  function computeResult(){
+    scores = {perfectionist:0, avoider:0, dreamer:0, crisis:0, defier:0, overdoer:0};
+    for (var i=0;i<QUESTIONS.length;i++){
+      var val = answers[i] || 1;
+      scores[QUESTIONS[i].s] += val;
+    }
+    var order = Object.keys(scores).sort(function(a,b){ return scores[b]-scores[a]; });
+    var top = order[0];
+    var second = order[1];
+    var maxPossible = 10;
+    renderResult(top, second, maxPossible);
+    show('result');
+    spawnConfetti();
+    try{
+      localStorage.setItem('procrastination-compass-result', JSON.stringify({top:top, scores:scores, ts:Date.now()}));
+    }catch(e){}
+  }
+
+  function renderResult(topKey, secondKey, maxPossible){
+    var data = STYLES[topKey];
+    document.getElementById('resIcon').textContent = data.icon;
+    document.getElementById('resTitle').textContent = data.title;
+    document.getElementById('resTagline').textContent = data.tagline;
+    document.getElementById('resDek').textContent = data.dek;
+    document.getElementById('resTrigger').textContent = data.trigger;
+
+    var resultHero = document.querySelector('.result-hero');
+    resultHero.style.background = COLOR[topKey].bg;
+    resultHero.style.color = COLOR[topKey].on;
+
+    var order = Object.keys(scores).sort(function(a,b){ return scores[b]-scores[a]; });
+    var bd = document.getElementById('breakdown');
+    bd.innerHTML = '';
+    order.forEach(function(key){
+      var pct = Math.round((scores[key]/maxPossible)*100);
+      var row = document.createElement('div');
+      row.className = 'bd-row' + (key===topKey ? ' lead' : '');
+      row.style.color = 'var(--charcoal)';
+      row.innerHTML =
+        '<div class="ic">' + STYLES[key].icon + '</div>' +
+        '<div class="bd-label">' + STYLES[key].title.replace('The ','') + '</div>' +
+        '<div class="bd-track"><div class="bd-fill" style="width:' + pct + '%; background:' + COLOR[key].bg + '"></div></div>' +
+        '<div class="bd-pct">' + pct + '%</div>';
+      bd.appendChild(row);
+    });
+
+    var list = document.getElementById('strategyList');
+    list.innerHTML = '';
+    data.strategies.forEach(function(s, i){
+      var item = document.createElement('div');
+      item.className = 'strategy';
+      item.innerHTML =
+        '<div class="ic" style="background:' + COLOR[topKey].bg + '; color:' + COLOR[topKey].on + '">' + (i+1) + '</div>' +
+        '<div class="body"><h4>' + s[0] + '</h4><p>' + s[1] + '</p></div>';
+      list.appendChild(item);
+    });
+
+    var noteEl = document.getElementById('secondNote');
+    if (scores[secondKey] > 0 && scores[secondKey] >= scores[topKey] - 2){
+      noteEl.hidden = false;
+      noteEl.innerHTML = STYLES[secondKey].icon + ' Your scores were close — you also lean toward <b>' + STYLES[secondKey].title + '</b>. Most students are a mix of two; worth skimming that style too.';
+    } else {
+      noteEl.hidden = true;
+    }
+  }
+
+  function spawnConfetti(){
+    removeConfetti();
+    var stage = document.getElementById('stage');
+    var layer = document.createElement('div');
+    layer.className = 'confetti-layer';
+    layer.id = 'confettiLayer';
+    var bits = ['🎉','✨','🎓','⭐','💫'];
+    for (var i=0;i<18;i++){
+      var piece = document.createElement('span');
+      piece.className = 'confetti-piece';
+      piece.textContent = bits[Math.floor(Math.random()*bits.length)];
+      piece.style.left = (Math.random()*100) + '%';
+      piece.style.animationDuration = (2.2 + Math.random()*1.6) + 's';
+      piece.style.animationDelay = (Math.random()*0.5) + 's';
+      layer.appendChild(piece);
+    }
+    stage.appendChild(layer);
+    window.setTimeout(removeConfetti, 4200);
+  }
+  function removeConfetti(){
+    var layer = document.getElementById('confettiLayer');
+    if (layer) layer.remove();
+  }
+
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    var order = Object.keys(scores).sort(function(a,b){ return scores[b]-scores[a]; });
+    var top = STYLES[order[0]].title;
+    var text = 'My procrastination pattern: ' + top + ' (via Procrastination Compass)';
+    function fallbackSelect(){
+      var btn = document.getElementById('copyBtn');
+      var original = btn.textContent;
+      btn.textContent = 'Copy failed — select manually';
+      window.setTimeout(function(){ btn.textContent = original; }, 1800);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        var btn = document.getElementById('copyBtn');
+        var original = btn.textContent;
+        btn.textContent = 'Copied ✓';
+        window.setTimeout(function(){ btn.textContent = original; }, 1500);
+      }).catch(fallbackSelect);
+    } else {
+      fallbackSelect();
+    }
+  });
+
+  show('intro');
+})();
+</script>
+</body>
+</html>
